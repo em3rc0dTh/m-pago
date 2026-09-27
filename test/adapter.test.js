@@ -92,3 +92,41 @@ for (const [name, change] of [
   const input = signed('12'); change(input);
   assert.throws(() => verifyWebhook(input), code('INVALID_SIGNATURE'));
 });
+
+test('Yape Payments API body is token-only, PEN and one installment', async () => {
+  let captured;
+  const provider = new MercadoPagoAdapter({ ...config, fetch: async (url, init) => {
+    captured = { url, init }; return Response.json({ id: 77 });
+  } });
+  await provider.createPayment({ record: { id: 'yape-attempt', amountMinor: 2500, exponent: 2 },
+    instrument: { token: 'fixture-yape-token', paymentMethodId: 'yape', installments: 1 },
+    payer: { email: 'test@example.invalid' }, description: 'Yape test' });
+  const payload = JSON.parse(captured.init.body);
+  assert.equal(payload.payment_method_id, 'yape');
+  assert.equal(payload.installments, 1);
+  assert.equal(payload.transaction_amount, 25);
+  assert.equal(payload.token, 'fixture-yape-token');
+  assert.equal('phoneNumber' in payload, false);
+  assert.equal('otp' in payload, false);
+  assert.equal('issuer_id' in payload, false);
+});
+
+test('Yape adapter rejects non-PEN, installments and issuer before provider I/O', async () => {
+  let calls = 0;
+  const fetch = async () => { calls++; return Response.json({ id: 1 }); };
+  const record = { id: 'yape-attempt', amountMinor: 1000, exponent: 2 };
+  const payer = { email: 'test@example.invalid' };
+  const description = 'Yape test';
+  const pen = new MercadoPagoAdapter({ ...config, fetch });
+  await assert.rejects(pen.createPayment({ record,
+    instrument: { token: 'fixture-yape-token', paymentMethodId: 'yape', installments: 2 },
+    payer, description }), code('YAPE_INSTALLMENTS_MUST_BE_ONE'));
+  await assert.rejects(pen.createPayment({ record,
+    instrument: { token: 'fixture-yape-token', paymentMethodId: 'yape', installments: 1, issuerId: '123' },
+    payer, description }), code('YAPE_ISSUER_NOT_SUPPORTED'));
+  const usd = new MercadoPagoAdapter({ ...config, currency: 'USD', fetch });
+  await assert.rejects(usd.createPayment({ record,
+    instrument: { token: 'fixture-yape-token', paymentMethodId: 'yape', installments: 1 },
+    payer, description }), code('YAPE_REQUIRES_PEN'));
+  assert.equal(calls, 0);
+});
