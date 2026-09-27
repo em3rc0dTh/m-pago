@@ -24,3 +24,12 @@ Las garantías de claim, frozen quote, outbox, permisos y retención ante incert
 ## Decisiones Yape
 
 El frontend helper `@em3rc0d/m-pago/yape` devuelve únicamente `{ token, paymentMethodId: "yape", installments: 1 }`. El celular y OTP no cruzan al backend. El core restringe Yape a PEN, rechaza cuotas distintas de 1 e issuer inyectado, y exige que el read-back de Payments API confirme `payment_method_id=yape`. Estas restricciones son decisiones locales de defensa en profundidad alineadas con el contrato documentado del proveedor.
+
+
+## Credenciales y ambiente
+
+Mercado Pago documenta credenciales de prueba y producción por separado, pero también indica que el prefijo del Access Token de prueba **puede variar según la solución**. Por ello, `m-pago` no usa el prefijo del token como autoridad del entorno. El integrador debe declarar `environment: "test" | "live"`, y LIVE requiere además `allowLive: true`. El read-back mantiene la verificación de `live_mode` del recurso como control adicional.
+
+Fuentes:
+- https://www.mercadopago.com.pe/developers/es/docs/your-integrations/credentials
+- https://www.mercadopago.com.pe/developers/es/docs/checkout-api-payments/prerequisites
