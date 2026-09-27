@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPaymentHandlers } from '../src/index.js';
-import { setup, context, command, signed } from './helpers.js';
+import { setup, context, command, yapeCommand, signed } from './helpers.js';
 function request(data, headers = {}) {
   return new Request('https://example.invalid/payments', { method: 'POST',
     headers: { 'content-type': 'application/json', 'x-idempotency-key': 'key-1', ...headers },
@@ -58,4 +58,16 @@ test('HTTP methods and unsigned webhooks are rejected', async t => {
   const h = handlers(service);
   assert.equal((await h.create(new Request('https://example.invalid'))).status, 405);
   assert.equal((await h.webhook(request({}))).status, 401);
+});
+
+test('HTTP Yape command reaches the same payment core without phone or OTP fields', async t => {
+  const { service, provider } = setup(t);
+  const response = await handlers(service).create(request(yapeCommand()));
+  assert.equal(response.status, 200);
+  const payment = await response.json();
+  assert.equal(payment.paymentMethodId, 'yape');
+  assert.equal(provider.lastInput.instrument.paymentMethodId, 'yape');
+  assert.equal(provider.lastInput.instrument.installments, 1);
+  assert.equal('phoneNumber' in provider.lastInput.instrument, false);
+  assert.equal('otp' in provider.lastInput.instrument, false);
 });
