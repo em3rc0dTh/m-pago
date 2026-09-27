@@ -22,7 +22,8 @@ async function environment(t) {
       const input = JSON.parse(body); creates++;
       const id = String(creates);
       value = { id, external_reference: input.external_reference, transaction_amount: input.transaction_amount,
-        currency_id: 'PEN', collector_id: 123, live_mode: false, status: 'approved',
+        currency_id: 'PEN', payment_method_id: input.payment_method_id,
+        collector_id: 123, live_mode: false, status: 'approved',
         date_last_updated: '2026-09-27T20:00:00Z', transaction_amount_refunded: 0 };
       payments.set(id, value);
     } else if (url.pathname.endsWith('/search')) {
