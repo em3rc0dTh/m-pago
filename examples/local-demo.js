@@ -16,6 +16,7 @@ const provider = new MercadoPagoAdapter({ accessToken: 'TEST-offline-fixture', c
       creates++;
       const input = JSON.parse(init.body);
       payment = { id: '1', collector_id: 123, live_mode: false, status: 'approved', currency_id: 'PEN',
+        payment_method_id: input.payment_method_id,
         external_reference: input.external_reference, transaction_amount: input.transaction_amount,
         date_last_updated: '2026-09-27T20:00:00Z', transaction_amount_refunded: 0 };
     }
