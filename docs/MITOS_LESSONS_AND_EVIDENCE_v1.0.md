@@ -1,6 +1,10 @@
 # MitoS → Mercado Pago — Lessons and Evidence v1.0
 
-Status: **Provenance record**
+Status: **Historical provenance record — not re-certified by m-pago v0.2.0**
+
+> This document preserves claims/references imported in the initial knowledge base.
+> This execution did not independently rerun those external branches, artifacts or
+> provider transactions. Current package evidence is in [VALIDATION.md](VALIDATION.md).
 Purpose: explain why the generic integration rules exist and which MitoS executions support them.
 
 ---

@@ -1,6 +1,12 @@
 # Mercado Pago — Generic Integration Playbook v1.0
 
-Status: **Reusable engineering contract**
+Status: **Historical v1 contract, amended by executable v0.2.0**
+
+> Safety amendment (2026-09-27): the implementation and current integration/operations
+> guides take precedence over illustrative v1 snippets. Unknown/transport failures
+> never release a claim. Refunds/chargebacks do not automatically reopen a payable.
+> Use immutable persisted quote snapshots, explicit merchant/mode validation and
+> a transactional outbox. See [INTEGRATION.md](INTEGRATION.md) and [OPERATIONS.md](OPERATIONS.md).
 Origin: knowledge extracted from MitoS / BookCars and refreshed against current Mercado Pago documentation.
 
 ---
@@ -134,8 +140,9 @@ Example mapping:
 Mercado Pago approved                         -> approved
 Mercado Pago pending/in_process/authorized   -> pending
 Mercado Pago rejected/cancelled              -> rejected
-Mercado Pago refunded/charged_back           -> refunded
-unknown/unmapped                              -> failed or explicit unknown
+Mercado Pago refunded                        -> refunded
+Mercado Pago charged_back                    -> charged_back
+unknown/unmapped                            -> unknown (claim retained)
 ```
 
 Rule:
@@ -315,11 +322,12 @@ UNIQUE(activeKey) WHERE activeKey exists
 Lifecycle:
 
 ```text
-pending/approved -> activeKey retained
-rejected/refunded/failed -> activeKey released
+creating/pending/approved/unknown/refunded/charged_back/in_mediation -> activeKey retained
+verified rejected/cancelled -> activeKey released
+transport errors -> activeKey retained until reconciled
 ```
 
-This allows a legitimate retry after a terminal failure while preventing two simultaneous active payments.
+Only a provider-verified rejection/cancellation allows a new attempt. Unknown outcomes are not terminal failures; refunds require a separate business obligation if another charge is appropriate.
 
 Do not rely on an in-memory mutex if multiple processes or instances can serve requests.
 

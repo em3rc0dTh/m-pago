@@ -1,0 +1,30 @@
+{
+  "name": "@em3rc0d/m-pago",
+  "version": "0.2.0",
+  "description": "Durable Mercado Pago Payments API integration core",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "examples",
+    "README.md",
+    "SECURITY.md",
+    "docs"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage test/*.test.js",
+    "check": "node scripts/check.mjs",
+    "demo": "node examples/local-demo.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/em3rc0dTh/m-pago.git"
+  },
+  "private": true
+}
