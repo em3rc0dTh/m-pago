@@ -24,6 +24,7 @@ El demo es completamente offline: usa el adapter real con transporte simulado y 
 - Precio, moneda e identidad del pagador derivados por el backend.
 - Una claim transaccional por entidad cobrable, compartida entre procesos.
 - Idempotencia local con fingerprint; UUID del intento como `X-Idempotency-Key` del proveedor.
+- Entorno Mercado Pago declarado explícitamente (`test|live`); LIVE requiere opt-in y no se infiere por prefijo del token.
 - Read-back antes de aceptar el estado: verifica ID, referencia, monto, moneda, método de pago, cuenta y `live_mode`.
 - Resultado incierto permanece bloqueado; recuperación mediante búsqueda y GET, sin otro POST.
 - Firma HMAC, comparación constante, timestamp y recurso de la URL firmado.
