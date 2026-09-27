@@ -37,6 +37,11 @@ export class MercadoPagoAdapter {
     }
   }
   async createPayment({ record, instrument, payer, description }) {
+    if (instrument.paymentMethodId === 'yape') {
+      requireThat(this.account.currency === 'PEN', 'YAPE_REQUIRES_PEN');
+      requireThat(instrument.installments === 1, 'YAPE_INSTALLMENTS_MUST_BE_ONE');
+      requireThat(instrument.issuerId === undefined, 'YAPE_ISSUER_NOT_SUPPORTED');
+    }
     const result = await this.#request('/v1/payments', { method: 'POST', key: record.id,
       body: {
         transaction_amount: toMajor(record.amountMinor, record.exponent),
