@@ -37,9 +37,11 @@ import { PaymentService, MercadoPagoAdapter, SQLitePaymentStore,
   createPaymentHandlers } from '@em3rc0d/m-pago';
 
 const provider = new MercadoPagoAdapter({
-  accessToken: process.env.MP_ACCESS_TOKEN,  // TEST-… requerido en modo default
+  accessToken: process.env.MP_ACCESS_TOKEN,
   collectorId: process.env.MP_COLLECTOR_ID, // cuenta receptora esperada
-  currency: 'PEN', exponent: 2
+  currency: 'PEN', exponent: 2,
+  environment: process.env.MP_ENVIRONMENT,  // "test" o "live"
+  allowLive: process.env.MP_ALLOW_LIVE === 'true'
 });
 const store = new SQLitePaymentStore('/var/lib/my-app/payments.sqlite');
 const service = new PaymentService({
@@ -54,7 +56,7 @@ const handlers = createPaymentHandlers({ service, authenticate });
 
 Cada archivo ledger queda vinculado a una sola combinación cuenta/entorno/moneda/exponente. Para múltiples comerciantes usa stores separados o implementa otro adapter; este paquete no administra OAuth ni credenciales por vendedor.
 
-El modo LIVE requiere `liveMode: true, allowLive: true` explícitos y gates del producto completos. La verificación del prefijo TEST es una barrera local, no reemplaza comprobar credenciales/cuenta ni el `live_mode` de cada recurso.
+El entorno debe declararse explícitamente como `environment: "test"` o `environment: "live"`. El modo LIVE además exige `allowLive: true` y los gates del producto completos. El paquete **no infiere el entorno por el prefijo del Access Token**, porque Mercado Pago documenta que los prefijos de credenciales de prueba pueden variar según la solución. En read-back se sigue verificando `live_mode` del recurso antes de aceptar el estado.
 
 ## 3. Montar las rutas
 
