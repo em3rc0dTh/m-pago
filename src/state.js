@@ -14,6 +14,9 @@ export function verifyPayment(record, payment, account) {
   requireThat(toMinor(payment.transaction_amount, record.exponent) === record.amountMinor,
     'PROVIDER_AMOUNT_MISMATCH', 409);
   requireThat(payment.currency_id === record.currency, 'PROVIDER_CURRENCY_MISMATCH', 409);
+  if (record.paymentMethodId) {
+    requireThat(payment.payment_method_id === record.paymentMethodId, 'PROVIDER_PAYMENT_METHOD_MISMATCH', 409);
+  }
   requireThat(providerId(payment.collector_id) === account.collectorId, 'PROVIDER_ACCOUNT_MISMATCH', 409);
   requireThat(payment.live_mode === account.liveMode, 'PROVIDER_MODE_MISMATCH', 409);
   requireThat(typeof payment.status === 'string' && payment.status.length <= 80, 'INVALID_PROVIDER_STATUS', 502);
@@ -48,5 +51,6 @@ export function checkTransition(record, snapshot) {
 export function publicPayment(record) {
   return { id: record.id, tenantId: record.tenantId, payableId: record.payableId,
     providerId: record.providerId, status: record.status, amountMinor: record.amountMinor,
-    currency: record.currency, refundedMinor: record.refundedMinor, version: record.version };
+    currency: record.currency, paymentMethodId: record.paymentMethodId,
+    refundedMinor: record.refundedMinor, version: record.version };
 }
