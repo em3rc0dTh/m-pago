@@ -53,8 +53,8 @@ async function worker(t, env, key, crash = '') {
 }
 function reopened(t, env) {
   const store = new SQLitePaymentStore(env.filename); t.after(() => store.close());
-  const provider = new MercadoPagoAdapter({ accessToken: 'TEST-fixture', currency: 'PEN', collectorId: '123',
-    fetch: (url, init) => fetch(env.endpoint + new URL(url).pathname + new URL(url).search, init) });
+  const provider = new MercadoPagoAdapter({ accessToken: 'APP_USR-fixture', currency: 'PEN', collectorId: '123',
+    environment: 'test', fetch: (url, init) => fetch(env.endpoint + new URL(url).pathname + new URL(url).search, init) });
   const service = new PaymentService({ store, provider, webhookSecret: secret, resolveQuote: async () => quote,
     authorizeOperator: async actor => actor?.role === 'payments-operator' });
   return { store, service };
