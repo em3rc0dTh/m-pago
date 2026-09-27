@@ -9,11 +9,11 @@ Base: `main@ae3bd5bafbe7f79f274a2c0005fb533d4a4df02e`.
 GitHub Actions:
 
 - workflow: `Payment core validation`
-- run: `36353522589`
+- run: `36359594270`
 - job: `validate`
 - Node.js: `24.21.0`
 - resultado: **success**
-- URL: https://github.com/em3rc0dTh/m-pago/actions/runs/36353522589
+- URL: https://github.com/em3rc0dTh/m-pago/actions/runs/36359594270
 
 | Comando / comprobación | Resultado |
 |---|---|
@@ -24,6 +24,14 @@ GitHub Actions:
 | `npm pack --dry-run` | PASS — `@em3rc0d/m-pago@0.3.0` |
 
 La suite no necesita Internet ni secretos de Mercado Pago. La frontera externa se simula; servicio, handlers, SQLite, transacciones, procesos, recuperación y helper Yape son ejecutados.
+
+## Endurecimiento Mercado Pago añadido
+
+- el entorno del proveedor se declara explícitamente como `test` o `live`;
+- no se infiere el ambiente a partir del prefijo del Access Token;
+- `live` requiere `allowLive: true`;
+- el read-back continúa verificando `live_mode` antes de aceptar estado;
+- la decisión se basa en documentación vigente de Mercado Pago, que advierte que el prefijo de credenciales TEST puede variar según la solución.
 
 ## Cobertura Yape añadida
 
