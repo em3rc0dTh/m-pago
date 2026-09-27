@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { MercadoPagoAdapter, verifyWebhook } from '../src/index.js';
 import { toMinor } from '../src/money.js';
 import { secret, signed } from './helpers.js';
-const config = { accessToken: 'TEST-fixture-not-a-credential', currency: 'PEN', collectorId: '123' };
+const config = { accessToken: 'APP_USR-fixture-not-a-credential', currency: 'PEN',
+  collectorId: '123', environment: 'test' };
 const code = expected => e => e.code === expected;
 
 test('adapter sends server UUID idempotency key and safe allowlisted body to fixed HTTPS API', async () => {
@@ -43,9 +44,17 @@ test('timeout aborts a stalled provider request', async () => {
     }) });
   await assert.rejects(provider.getPayment('42'), code('PROVIDER_UNAVAILABLE'));
 });
-test('TEST default rejects production token before I/O; LIVE needs explicit opt-in', () => {
-  assert.throws(() => new MercadoPagoAdapter({ ...config, accessToken: 'APP_USR-fixture' }), code('TEST_CREDENTIAL_REQUIRED'));
-  assert.throws(() => new MercadoPagoAdapter({ ...config, liveMode: true }), code('LIVE_MODE_DISABLED'));
+test('provider environment is explicit; token prefixes are not used as environment authority', () => {
+  assert.throws(() => new MercadoPagoAdapter({ ...config, environment: undefined }),
+    code('PAYMENT_ENVIRONMENT_REQUIRED'));
+  assert.throws(() => new MercadoPagoAdapter({ ...config, environment: 'live' }),
+    code('LIVE_MODE_DISABLED'));
+  const live = new MercadoPagoAdapter({ ...config, environment: 'live', allowLive: true });
+  assert.equal(live.account.liveMode, true);
+  assert.equal(live.account.environment, 'live');
+  const testProvider = new MercadoPagoAdapter(config);
+  assert.equal(testProvider.account.liveMode, false);
+  assert.equal(testProvider.account.environment, 'test');
 });
 test('provider ids reject unsafe integers and URL injection', async () => {
   const provider = new MercadoPagoAdapter(config);
