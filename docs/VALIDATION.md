@@ -1,61 +1,96 @@
-# Validación m-pago v0.2.0
+# Validación m-pago v0.3.0 — Tarjeta + Yape
 
-Fecha: 2026-09-27. Rama: `feat/reusable-payment-core`.
-Base revisada: `b581d7b4e0d3b2acb56f9fbe7d769fe58bd16d8d`.
-Runtime local: Node.js 24.19.0, SQLite 3.53.3.
+Fecha: 2026-09-27.  
+Rama: `feat/yape-checkout-api`.  
+Base: `main@ae3bd5bafbe7f79f274a2c0005fb533d4a4df02e`.
 
 ## Resultado ejecutado
 
+GitHub Actions:
+
+- workflow: `Payment core validation`
+- run: `36353522589`
+- job: `validate`
+- Node.js: `24.21.0`
+- resultado: **success**
+- URL: https://github.com/em3rc0dTh/m-pago/actions/runs/36353522589
+
 | Comando / comprobación | Resultado |
 |---|---|
-| `npm ci --ignore-scripts --no-audit --no-fund` | Correcto, cero dependencias externas |
-| `npm run check` | Parseo sintáctico de JS correcto; no es typecheck TypeScript |
-| `npm test` | **61 pruebas, 61 aprobadas, 0 fallidas, 0 omitidas** |
-| `npm run demo` | OFFLINE_SIMULATION, un POST, replay del mismo pago y una intención de fulfillment |
-| `npm pack` + instalación en consumidor temporal | Importación, SQLite y demo del paquete instalado correctos |
-| `git diff --check` | Correcto |
-| Revisión de literales de credenciales | Sin credenciales reales identificadas; fixtures etiquetados, `.env.example` vacío |
+| `npm ci --ignore-scripts --no-audit --no-fund` | PASS |
+| `npm run check` | PASS — todos los JS parsean |
+| `npm test` | **78 pruebas, 78 aprobadas, 0 fallidas** |
+| `npm run demo` | PASS — `OFFLINE_SIMULATION` |
+| `npm pack --dry-run` | PASS — `@em3rc0d/m-pago@0.3.0` |
 
-La suite no necesita Internet ni secretos. Se simula la superficie externa del proveedor; servicio, handlers, SQLite, transacciones, procesos y recuperación son ejecutados.
+La suite no necesita Internet ni secretos de Mercado Pago. La frontera externa se simula; servicio, handlers, SQLite, transacciones, procesos, recuperación y helper Yape son ejecutados.
 
-## Escenarios relevantes
+## Cobertura Yape añadida
 
-- Veinte llamadas concurrentes con distintas claves: un único create del proveedor simulado.
-- Seis procesos Node independientes y un archivo SQLite: una aprobación y cinco conflictos; exactamente un POST HTTP al proveedor local simulado.
-- Muerte de proceso con exit 23 después de aceptación del POST, antes de persistir provider ID: un nuevo servicio recupera por referencia y GET; ningún segundo POST.
-- Inserción de outbox forzada a fallar mediante trigger SQLite: rollback del estado; reconciliación posterior confirma estado y evento juntos.
-- Snapshot aprobado lento que llega después de reembolso: no revierte el estado nuevo.
-- Evento consumido sin ack / lease expirada: redelivery con mismo ID; consumidor deduplica.
-- Autorización de creación/replay/consulta/operación, aislamiento de tenants y binding de cuenta/entorno.
-- Monto/currency/reference/collector/live-mode/ID/timestamp erróneos: ningún evento de aprobación ni liberación de claim.
-- Timeout, 4xx, 429, 5xx y JSON inválido: error saneado, sin POST automático adicional.
-- Firmas alteradas, campos duplicados/ausentes, timestamp viejo/futuro y recurso adulterado: rechazo.
-- Body de webhook falsificado: se consulta exclusivamente el ID firmado de URL.
-- Rechazo/cancelación, unknown, reembolsos parciales/totales, contracargos y snapshots contradictorios.
-- Revisión de archivos SQLite/WAL del escenario de caída: sin token de tarjeta ni email fixture persistidos.
+- tokenización browser-side mediante un fake de la superficie oficial `MercadoPago(...).yape(...).create()`;
+- celular y OTP llegan al SDK simulado pero no forman parte del instrumento devuelto al backend;
+- errores del SDK/tokenización se saneán;
+- request Payments API contiene token, `payment_method_id=yape`, `installments=1` y no contiene celular/OTP;
+- Yape exige PEN;
+- Yape rechaza cuotas distintas de 1;
+- Yape rechaza `issuerId` aportado por el cliente;
+- read-back exige que `payment_method_id` coincida con el intento persistido;
+- Yape y tarjeta compiten por la misma claim de una obligación;
+- replay Yape reutiliza el mismo intento;
+- el token Yape no queda almacenado en el ledger;
+- el boundary HTTP acepta el instrumento Yape sin celular ni OTP.
 
-## Gates y límites
+## Cobertura heredada del core
 
-| Gate | Estado de esta entrega |
+La misma ejecución vuelve a probar, entre otros:
+
+- veinte requests concurrentes con distintas claves → un create del proveedor simulado;
+- seis procesos Node independientes y un SQLite compartido → un único POST;
+- caída tras aceptación del POST → recuperación por búsqueda/GET sin segundo cobro;
+- rollback atómico si falla inserción de outbox;
+- idempotencia y fingerprint;
+- autorización de cliente y operador;
+- tenant isolation;
+- webhook firmado y replay seguro;
+- reconciliación;
+- read-back de monto, moneda, referencia, collector, entorno e ID;
+- estados desconocidos, refund, chargeback y snapshots fuera de orden;
+- outbox durable y redelivery.
+
+## Gates
+
+| Gate | Estado v0.3.0 |
 |---|---|
-| C0 — checks y tests | PASS local |
-| C1 — aplicación de referencia | PASS local para core/handlers/SQLite; auth y dominio reales del producto aún deben validarse |
-| C2 — Mercado Pago TEST real | PENDIENTE: no se suministraron ni usaron credenciales TEST reales |
-| C3 — browser E2E | PENDIENTE: no hay checkout frontend real incluido |
-| C4 — webhook real | PENDIENTE: no se desplegó URL HTTPS ni se recibió entrega real del proveedor |
-| C5 — producción | PENDIENTE: revisión de producto, infraestructura, carga, backups, alertas y gates anteriores |
+| C0 — checks/tests/package | **PASS — GitHub Actions** |
+| C1 — aplicación de referencia | **PASS con proveedor simulado**; auth/dominio real se valida por producto |
+| C2 — Mercado Pago TEST real | **PENDIENTE** |
+| C3 — navegador con Mercado Pago JS real | **PENDIENTE** |
+| C4 — webhook HTTPS entregado por Mercado Pago | **PENDIENTE** |
+| C5 — producción | **PENDIENTE** |
 
-La documentación de Mitos se conserva como provenance importada, no como evidencia ejecutada en este runtime. Tampoco se afirma certificación de otro DB, framework, país, método de pago o proveedor. El workflow incluido repite los checks sin credenciales; su ejecución remota debe comprobarse en el PR.
+## No afirmaciones
 
-## Siguiente certificación por producto
+Este receipt **no** afirma:
 
-Con una integración de dominio real y credenciales TEST cargadas de forma segura en su entorno:
+- que se haya enviado celular/OTP reales;
+- que se haya generado un token real de Yape;
+- que exista una transacción Mercado Pago TEST;
+- que el checkout haya sido probado contra MercadoPago.js real;
+- que un webhook haya llegado desde infraestructura Mercado Pago;
+- readiness de producción.
 
-1. Crear pago usando la tokenización real del país/método elegidos.
-2. Verificar `live_mode=false`, cuenta, monto, moneda, referencia y GET.
-3. Repetir intento, inducir timeout controlado y comprobar recuperación sin duplicado.
-4. Validar controles de sesión/tenant/pagador y eventos en la base del producto.
-5. Completar checkout navegador y entrega de webhook HTTPS con firma válida.
-6. Probar reconciliación cuando no llega el webhook y consumo de eventos tras reinicio.
+La documentación oficial de Yape está registrada en `PROVIDER_SOURCES.md` y `YAPE.md`.
 
-No pegar secretos en issues, PRs, capturas ni reportes. Registrar solo IDs operativos y evidencia saneada.
+## Siguiente certificación
+
+Con credenciales TEST configuradas fuera del repositorio:
+
+1. cargar Mercado Pago JS real con Public Key TEST;
+2. usar el celular/OTP de prueba documentado por Mercado Pago;
+3. generar un token Yape real de TEST;
+4. crear el pago con este mismo core;
+5. verificar por GET `live_mode=false`, collector, PEN, referencia, monto y `payment_method_id=yape`;
+6. probar replay/reconciliación sin duplicar POST;
+7. certificar browser E2E y webhook HTTPS real por separado.
+
+Nunca adjuntar Access Token, webhook secret, OTP, celular real ni token efímero en logs, issues o receipts.
