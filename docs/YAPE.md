@@ -151,7 +151,7 @@ Usa siempre las credenciales de prueba indicadas por Mercado Pago para la cuenta
 ## Gates pendientes
 
 ```text
-C0 core/tests local/CI            cubierto por el PR de Yape cuando CI pase
+C0 core/tests/package             PASS — 78/78, GitHub Actions run 36353522589
 C1 integración de referencia      cubierto sin proveedor real
 C2 Mercado Pago TEST real         PENDIENTE
 C3 browser E2E con SDK real       PENDIENTE
