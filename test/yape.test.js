@@ -11,7 +11,7 @@ class FakeMercadoPago {
   }
   yape(input) {
     FakeMercadoPago.calls.at(-1).input = input;
-    return { create: async () => ({ id: 'fixture-yape-token-12345678' }) };
+    return { create: async () => ({ id: 'fixture-yape-token-abcdefgh' }) };
   }
 }
 
@@ -28,7 +28,7 @@ test('browser helper sends phone and OTP only to Mercado Pago and returns backen
     input: { phoneNumber: '111111111', otp: '123456' },
   });
   assert.deepEqual(instrument, {
-    token: 'fixture-yape-token-12345678',
+    token: 'fixture-yape-token-abcdefgh',
     paymentMethodId: 'yape',
     installments: 1,
   });
@@ -77,4 +77,22 @@ test('browser helper rejects unavailable SDK and malformed token responses', asy
   await assert.rejects(createYapeInstrument({
     publicKey: 'public-key', phoneNumber: '111111111', otp: '123456', MercadoPago: Invalid,
   }), code('INVALID_YAPE_TOKEN'));
+});
+
+test('browser helper sanitizes constructor failures', async () => {
+  class BrokenConstructor {
+    constructor() { throw Error('private sdk config'); }
+  }
+  await assert.rejects(createYapeInstrument({
+    publicKey: 'public-key', phoneNumber: '111111111', otp: '123456', MercadoPago: BrokenConstructor,
+  }), code('YAPE_SDK_UNAVAILABLE'));
+});
+
+test('browser helper rejects incomplete Yape SDK surfaces', async () => {
+  class Incomplete {
+    yape() { return {}; }
+  }
+  await assert.rejects(createYapeInstrument({
+    publicKey: 'public-key', phoneNumber: '111111111', otp: '123456', MercadoPago: Incomplete,
+  }), code('YAPE_SDK_UNAVAILABLE'));
 });
