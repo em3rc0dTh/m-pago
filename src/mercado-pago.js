@@ -5,12 +5,13 @@ export class MercadoPagoAdapter {
   #accessToken;
   #fetch;
   #timeoutMs;
-  constructor({ accessToken, currency, exponent = 2, collectorId, liveMode = false,
+  constructor({ accessToken, currency, exponent = 2, collectorId, environment,
     allowLive = false, fetch: fetchImpl = globalThis.fetch, timeoutMs = 8000 }) {
     requireThat(typeof accessToken === 'string' && accessToken.length > 0 && !/\s/.test(accessToken),
       'INVALID_ACCESS_TOKEN');
-    requireThat(liveMode || accessToken.startsWith('TEST-'), 'TEST_CREDENTIAL_REQUIRED');
-    requireThat(typeof liveMode === 'boolean' && (!liveMode || allowLive === true), 'LIVE_MODE_DISABLED');
+    requireThat(environment === 'test' || environment === 'live', 'PAYMENT_ENVIRONMENT_REQUIRED');
+    const liveMode = environment === 'live';
+    requireThat(!liveMode || allowLive === true, 'LIVE_MODE_DISABLED');
     requireThat(Number.isFinite(timeoutMs) && timeoutMs > 0 && timeoutMs <= 15000, 'INVALID_TIMEOUT');
     requireThat(/^[A-Z]{3}$/.test(currency) && Number.isInteger(exponent) && exponent >= 0 && exponent <= 3,
       'INVALID_MERCHANT_CONFIG');
@@ -18,7 +19,7 @@ export class MercadoPagoAdapter {
     this.#fetch = fetchImpl;
     this.#timeoutMs = timeoutMs;
     Object.defineProperty(this, 'account', { value: Object.freeze({ collectorId: providerId(collectorId),
-      currency, exponent, liveMode }), enumerable: true });
+      currency, exponent, liveMode, environment }), enumerable: true });
   }
   async #request(path, { method = 'GET', body, key } = {}) {
     try {
@@ -37,6 +38,11 @@ export class MercadoPagoAdapter {
     }
   }
   async createPayment({ record, instrument, payer, description }) {
+    if (instrument.paymentMethodId === 'yape') {
+      requireThat(this.account.currency === 'PEN', 'YAPE_REQUIRES_PEN');
+      requireThat(instrument.installments === 1, 'YAPE_INSTALLMENTS_MUST_BE_ONE');
+      requireThat(instrument.issuerId === undefined, 'YAPE_ISSUER_NOT_SUPPORTED');
+    }
     const result = await this.#request('/v1/payments', { method: 'POST', key: record.id,
       body: {
         transaction_amount: toMajor(record.amountMinor, record.exponent),

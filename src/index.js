@@ -4,3 +4,4 @@ export { SQLitePaymentStore } from './sqlite-store.js';
 export { createPaymentHandlers } from './http.js';
 export { PaymentError } from './errors.js';
 export { verifyWebhook } from './webhook.js';
+export { createYapeInstrument } from './yape.js';

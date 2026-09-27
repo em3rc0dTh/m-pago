@@ -2,7 +2,7 @@
 
 Núcleo reusable de integración con **Mercado Pago Payments API `/v1/payments`**, con ledger durable, idempotencia, webhook autenticado y recuperación. Conserva el conocimiento extraído de Mitos/BookCars, pero su código no depende de alquileres ni de ese repositorio.
 
-**Estado: implementación de referencia v0.2.0 validada localmente; certificación Mercado Pago TEST real pendiente.** No es un SDK oficial de Mercado Pago ni una integración universal ya certificada.
+**Estado: implementación de referencia v0.3.0 con tarjeta + Yape; certificación Mercado Pago TEST real pendiente.** No es un SDK oficial de Mercado Pago ni una integración universal ya certificada.
 
 ## Ejecutar ahora
 
@@ -24,7 +24,8 @@ El demo es completamente offline: usa el adapter real con transporte simulado y 
 - Precio, moneda e identidad del pagador derivados por el backend.
 - Una claim transaccional por entidad cobrable, compartida entre procesos.
 - Idempotencia local con fingerprint; UUID del intento como `X-Idempotency-Key` del proveedor.
-- Read-back antes de aceptar el estado: verifica ID, referencia, monto, moneda, cuenta y `live_mode`.
+- Entorno Mercado Pago declarado explícitamente (`test|live`); LIVE requiere opt-in y no se infiere por prefijo del token.
+- Read-back antes de aceptar el estado: verifica ID, referencia, monto, moneda, método de pago, cuenta y `live_mode`.
 - Resultado incierto permanece bloqueado; recuperación mediante búsqueda y GET, sin otro POST.
 - Firma HMAC, comparación constante, timestamp y recurso de la URL firmado.
 - Estados desconocidos, reembolsos parciales, contracargos y eventos fuera de orden.
@@ -41,7 +42,7 @@ Para instalar desde un checkout revisado:
 # Dentro de m-pago:
 npm pack
 # Dentro de tu backend Node.js:
-npm install /ruta/m-pago/em3rc0d-m-pago-0.2.0.tgz
+npm install /ruta/m-pago/em3rc0d-m-pago-0.3.0.tgz
 ```
 
 Importación: `import { PaymentService, MercadoPagoAdapter, SQLitePaymentStore } from '@em3rc0d/m-pago'`.
@@ -52,11 +53,20 @@ El paquete está marcado `private` para impedir publicación accidental a npm. S
 | Backend | Núcleo JavaScript ESM y handlers HTTP | Sesión, permisos, CSRF, rate limits, rutas |
 | Precio | Snapshot de monto entero y moneda | Cálculo, impuestos, conversión y congelación de cotización |
 | Ledger | SQLite WAL, transacciones y restricciones UNIQUE | Disco local durable, permisos, backups |
-| UI | Contrato de token recibido | Brick/SDK de tokenización y experiencia de checkout |
+| UI | Contrato tokenizado + helper Yape (`@em3rc0d/m-pago/yape`) | SDK/experiencia visual del checkout |
 | Negocio | Outbox durable | Aplicar evento y deduplicarlo en una sola transacción |
 | Operación | Reconciliación paginada y dispatch | Scheduler, alertas y atención de casos inciertos |
 
 SQLite soporta varios procesos **en un mismo host/disco local**. Réplicas en distintos servidores, serverless y volúmenes efímeros requieren otro store compartido; véase [contrato de persistencia](docs/STORE_CONTRACT.md). Un backend Java/Python puede usar este núcleo detrás de un servicio privado diseñado por el producto; no existe un SDK nativo para esos runtimes.
+
+## Métodos incluidos
+
+| Método | Backend | Frontend reusable | Certificación real |
+|---|---|---|---|
+| Tarjeta tokenizada | ✅ Payments API | contrato de token | ⏳ C2/C3 pendiente |
+| Yape | ✅ `payment_method_id=yape`, 1 cuota, PEN | ✅ `createYapeInstrument` | ⏳ C2/C3 pendiente |
+
+Para Yape consulta [`docs/YAPE.md`](docs/YAPE.md). Celular y OTP se usan únicamente para generar el token con Mercado Pago JS; no llegan al backend.
 
 ## Alcance y evidencia
 
@@ -65,6 +75,7 @@ Incluye pagos únicos tokenizados mediante Payments API. **No incluye** Orders A
 La compatibilidad del país/cuenta/método y la UI real se validan por producto. No se afirma que cualquier cuenta de Mercado Pago acepte este flujo.
 
 - [Contrato y arranque de integración](docs/INTEGRATION.md)
+- [Yape — Checkout API](docs/YAPE.md)
 - [Operación y recuperación](docs/OPERATIONS.md)
 - [Contrato para otros stores](docs/STORE_CONTRACT.md)
 - [Evidencia y gates](docs/VALIDATION.md)

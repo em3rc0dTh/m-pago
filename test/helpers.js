@@ -5,6 +5,8 @@ export const context = { tenantId: 'tenant-a', userId: 'user-a' };
 export const operator = { role: 'payments-operator' };
 export const command = (key = 'key-1', payableId = 'order-1') => ({ payableId, idempotencyKey: key,
   instrument: { token: 'fixture-card-token', paymentMethodId: 'visa', installments: 1 } });
+export const yapeCommand = (key = 'yape-key-1', payableId = 'order-1') => ({ payableId, idempotencyKey: key,
+  instrument: { token: 'fixture-yape-token', paymentMethodId: 'yape', installments: 1 } });
 export const quote = { amountMinor: 25000, currency: 'PEN', exponent: 2, version: 'v1',
   description: 'Fixture order', payer: { email: 'fixture@example.invalid' } };
 export function signed(id, { now = Date.now(), ts = String(Math.floor(now / 1000)), requestId = 'request-1' } = {}) {
@@ -20,7 +22,8 @@ export class FakeProvider {
     this.lastInput = { record, instrument, payer };
     const id = String(this.creates);
     this.payments.set(id, { id, external_reference: record.id, transaction_amount: 250,
-      currency_id: 'PEN', collector_id: 123, live_mode: false, status: 'approved',
+      currency_id: 'PEN', payment_method_id: instrument.paymentMethodId,
+      collector_id: 123, live_mode: false, status: 'approved',
       transaction_amount_refunded: 0, date_last_updated: '2026-09-27T20:00:00.000Z' });
     return { id };
   }

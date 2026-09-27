@@ -1,13 +1,14 @@
 {
   "name": "@em3rc0d/m-pago",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Durable Mercado Pago Payments API integration core",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
   },
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./yape": "./src/yape.js"
   },
   "files": [
     "src",

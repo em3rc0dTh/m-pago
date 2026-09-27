@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PaymentService, PaymentError, SQLitePaymentStore } from '../src/index.js';
-import { setup, context, operator, command, quote, secret, signed, FakeProvider } from './helpers.js';
+import { setup, context, operator, command, yapeCommand, quote, secret, signed, FakeProvider } from './helpers.js';
 
 const code = expected => error => error.code === expected;
 
@@ -224,4 +224,60 @@ test('concurrent GET snapshots completing out of order preserve newer refunded s
   await service.reconcile(operator, result.id);
   release();
   assert.equal((await slow).status, 'refunded');
+});
+
+test('Yape and card compete for the same payable through the same atomic claim', async t => {
+  const { service, provider } = setup(t);
+  const results = await Promise.allSettled([
+    service.create(context, yapeCommand('yape-key')),
+    service.create(context, command('card-key')),
+  ]);
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal(results.filter(result => result.status === 'rejected').length, 1);
+  assert.equal(results.find(result => result.status === 'rejected').reason.code, 'PAYMENT_ALREADY_ACTIVE');
+  assert.equal(provider.creates, 1);
+});
+
+test('Yape enforces PEN, one installment and no issuer at service boundary', async t => {
+  const { service, provider } = setup(t);
+  const installments = yapeCommand(); installments.instrument.installments = 2;
+  await assert.rejects(service.create(context, installments), code('YAPE_INSTALLMENTS_MUST_BE_ONE'));
+  const issuer = yapeCommand(); issuer.instrument.issuerId = '123';
+  await assert.rejects(service.create(context, issuer), code('YAPE_ISSUER_NOT_SUPPORTED'));
+  const usdProvider = new FakeProvider();
+  usdProvider.account = { ...usdProvider.account, currency: 'USD' };
+  const { service: usdService } = setup(t, { provider: usdProvider,
+    resolveQuote: async () => ({ ...quote, currency: 'USD' }) });
+  await assert.rejects(usdService.create(context, yapeCommand()), code('YAPE_REQUIRES_PEN'));
+  assert.equal(provider.creates, 0);
+});
+
+test('Yape provider read-back must confirm payment_method_id before approval', async t => {
+  const provider = new FakeProvider();
+  const get = provider.getPayment.bind(provider);
+  provider.getPayment = async id => ({ ...await get(id), payment_method_id: 'visa' });
+  const { service, store } = setup(t, { provider });
+  await assert.rejects(service.create(context, yapeCommand()), code('PROVIDER_PAYMENT_METHOD_MISMATCH'));
+  assert.equal(store.list()[0].status, 'creating');
+  await assert.rejects(service.create(context, command('card-after-yape')), code('PAYMENT_ALREADY_ACTIVE'));
+});
+
+test('Yape replay returns the same attempt and exposes the verified method without token data', async t => {
+  const { service, provider } = setup(t);
+  const first = await service.create(context, yapeCommand());
+  const replay = await service.create(context, yapeCommand());
+  assert.equal(first.id, replay.id);
+  assert.equal(first.paymentMethodId, 'yape');
+  assert.equal(replay.paymentMethodId, 'yape');
+  assert.equal(provider.creates, 1);
+  assert.equal(JSON.stringify(replay).includes('fixture-yape-token'), false);
+});
+
+test('Yape one-time token is never persisted in the ledger', async t => {
+  const { service, store } = setup(t);
+  await service.create(context, yapeCommand());
+  const persisted = JSON.stringify(store.list());
+  assert.equal(persisted.includes('fixture-yape-token'), false);
+  assert.equal(persisted.includes('123456'), false);
+  assert.equal(persisted.includes('111111111'), false);
 });

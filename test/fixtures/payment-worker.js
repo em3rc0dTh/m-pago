@@ -2,8 +2,8 @@ import { MercadoPagoAdapter, PaymentService, SQLitePaymentStore } from '../../sr
 import { context, command, quote, secret } from '../helpers.js';
 const [filename, endpoint, key, crash] = process.argv.slice(2);
 const store = new SQLitePaymentStore(filename);
-const provider = new MercadoPagoAdapter({ accessToken: 'TEST-fixture', currency: 'PEN', collectorId: '123',
-  fetch: (url, init) => fetch(endpoint + new URL(url).pathname + new URL(url).search, init) });
+const provider = new MercadoPagoAdapter({ accessToken: 'APP_USR-fixture', currency: 'PEN', collectorId: '123',
+  environment: 'test', fetch: (url, init) => fetch(endpoint + new URL(url).pathname + new URL(url).search, init) });
 if (crash === 'crash') {
   const create = provider.createPayment.bind(provider);
   provider.createPayment = async input => { await create(input); process.exit(23); };

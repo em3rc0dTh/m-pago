@@ -22,7 +22,8 @@ async function environment(t) {
       const input = JSON.parse(body); creates++;
       const id = String(creates);
       value = { id, external_reference: input.external_reference, transaction_amount: input.transaction_amount,
-        currency_id: 'PEN', collector_id: 123, live_mode: false, status: 'approved',
+        currency_id: 'PEN', payment_method_id: input.payment_method_id,
+        collector_id: 123, live_mode: false, status: 'approved',
         date_last_updated: '2026-09-27T20:00:00Z', transaction_amount_refunded: 0 };
       payments.set(id, value);
     } else if (url.pathname.endsWith('/search')) {
@@ -52,8 +53,8 @@ async function worker(t, env, key, crash = '') {
 }
 function reopened(t, env) {
   const store = new SQLitePaymentStore(env.filename); t.after(() => store.close());
-  const provider = new MercadoPagoAdapter({ accessToken: 'TEST-fixture', currency: 'PEN', collectorId: '123',
-    fetch: (url, init) => fetch(env.endpoint + new URL(url).pathname + new URL(url).search, init) });
+  const provider = new MercadoPagoAdapter({ accessToken: 'APP_USR-fixture', currency: 'PEN', collectorId: '123',
+    environment: 'test', fetch: (url, init) => fetch(env.endpoint + new URL(url).pathname + new URL(url).search, init) });
   const service = new PaymentService({ store, provider, webhookSecret: secret, resolveQuote: async () => quote,
     authorizeOperator: async actor => actor?.role === 'payments-operator' });
   return { store, service };
