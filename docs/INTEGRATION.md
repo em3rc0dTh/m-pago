@@ -107,3 +107,48 @@ El evento contiene `{ id, type, payment, createdAt }`; `payment` contiene `id`, 
 ## 5. Gates por integración
 
 Antes de salir de la simulación: validar país/cuenta/método, el adapter del dominio, autorización real, estrategia de almacenamiento y consumidor de eventos. Después: TEST con tokenización real, read-back, replay, UI, webhook HTTPS real y revisión de producción. Consulta `VALIDATION.md`.
+
+
+## 6. Yape
+
+Yape usa el mismo `PaymentService`, ledger, idempotencia, webhook, reconciliación y outbox que tarjeta. Cambia únicamente la tokenización del instrumento y las reglas específicas del método.
+
+En navegador:
+
+```js
+import { createYapeInstrument } from '@em3rc0d/m-pago/yape';
+
+const instrument = await createYapeInstrument({
+  publicKey: PUBLIC_KEY,
+  phoneNumber,
+  otp,
+});
+
+await fetch('/api/payments', {
+  method: 'POST',
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Idempotency-Key': logicalAttemptKey,
+  },
+  body: JSON.stringify({ payableId, instrument }),
+});
+```
+
+El helper llama a Mercado Pago JS para crear el token. **No envíes `phoneNumber` ni `otp` en el JSON del backend.**
+
+Contrato resultante:
+
+```json
+{
+  "token": "TOKEN_YAPE_EFIMERO",
+  "paymentMethodId": "yape",
+  "installments": 1
+}
+```
+
+El core exige Yape en `PEN`, exactamente una cuota y sin `issuerId` proporcionado por el cliente. Tras crear el pago, el GET canónico del proveedor debe confirmar `payment_method_id === "yape"`; un mismatch no puede aprobar ni liberar la claim.
+
+Tarjeta y Yape compiten por la misma `activeKey` de la obligación. Por tanto, dos intentos concurrentes con métodos distintos no pueden abrir dos cobros activos para el mismo `payableId`.
+
+Consulta [YAPE.md](YAPE.md) para formulario, pruebas y gates.
