@@ -1,6 +1,11 @@
 # ASTRA WORK — Mercado Pago Reuse Handoff v1.0
 
 Mode: **WORK**
+
+> v0.2.0 implementation now exists in `src/`. Read `docs/INTEGRATION.md`,
+> `docs/OPERATIONS.md`, `docs/STORE_CONTRACT.md` and `docs/VALIDATION.md` before
+> applying this historical handoff. Do not infer TEST/provider certification
+> from the local suite or external Mitos history.
 Goal: apply the proven Mercado Pago integration knowledge rapidly to a new product without dragging MitoS-specific assumptions into the implementation.
 
 ---
@@ -187,13 +192,13 @@ It must:
 
 1. GET provider payment.
 2. resolve local payable entity from trusted reference.
-3. recalculate authoritative amount/currency.
+3. load the immutable authoritative quote captured for this attempt.
 4. verify amount.
 5. verify currency.
 6. verify external reference.
 7. normalize provider status.
 8. upsert local ledger.
-9. apply approved domain transition idempotently.
+9. atomically enqueue the verified change in an outbox; the host applies/deduplicates the business transition transactionally.
 10. return normalized transaction.
 
 ### WORK-08 — webhook
