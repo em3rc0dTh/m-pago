@@ -9,7 +9,7 @@ function actor(context) {
   identifier(context?.tenantId, 'UNAUTHORIZED');
   identifier(context?.userId, 'UNAUTHORIZED');
 }
-function instrumentFrom(value) {
+function instrumentFrom(value, account) {
   requireThat(value && typeof value === 'object', 'INVALID_INSTRUMENT');
   requireThat(Object.keys(value).every(k => ['token', 'paymentMethodId', 'installments', 'issuerId'].includes(k)),
     'UNSUPPORTED_INSTRUMENT_FIELD');
@@ -17,6 +17,11 @@ function instrumentFrom(value) {
   const paymentMethodId = identifier(value.paymentMethodId, 'INVALID_PAYMENT_METHOD');
   const installments = value.installments ?? 1;
   requireThat(Number.isInteger(installments) && installments > 0 && installments <= 48, 'INVALID_INSTALLMENTS');
+  if (paymentMethodId === 'yape') {
+    requireThat(account.currency === 'PEN', 'YAPE_REQUIRES_PEN');
+    requireThat(installments === 1, 'YAPE_INSTALLMENTS_MUST_BE_ONE');
+    requireThat(value.issuerId === undefined, 'YAPE_ISSUER_NOT_SUPPORTED');
+  }
   return { token, paymentMethodId, installments,
     ...(value.issuerId === undefined ? {} : { issuerId: identifier(value.issuerId, 'INVALID_ISSUER') }) };
 }
@@ -58,7 +63,7 @@ export class PaymentService {
     actor(context);
     identifier(command?.payableId, 'INVALID_PAYABLE_ID');
     identifier(command?.idempotencyKey, 'INVALID_IDEMPOTENCY_KEY');
-    const instrument = instrumentFrom(command.instrument);
+    const instrument = instrumentFrom(command.instrument, this.#provider.account);
     // The host resolves identity, ownership, price and payer from its database.
     const quote = quoteFrom(await this.#resolveQuote(context, command.payableId), this.#provider.account);
     const fingerprint = digest([command.payableId, quote, instrument]);
@@ -67,7 +72,8 @@ export class PaymentService {
       requestKey: digest([context.tenantId, context.userId, command.idempotencyKey]),
       activeKey: digest([context.tenantId, command.payableId]), fingerprint,
       amountMinor: quote.amountMinor, currency: quote.currency, exponent: quote.exponent,
-      quoteVersion: quote.version, providerId: null, providerStatus: null, status: 'creating',
+      quoteVersion: quote.version, paymentMethodId: instrument.paymentMethodId,
+      providerId: null, providerStatus: null, status: 'creating',
       providerUpdatedAt: null, refundedMinor: 0, everApproved: false, version: 0, createdAt: Date.now() };
     const claimed = await this.#store.claim(candidate);
     let record = claimed.record;
