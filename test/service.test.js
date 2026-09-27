@@ -272,3 +272,12 @@ test('Yape replay returns the same attempt and exposes the verified method witho
   assert.equal(provider.creates, 1);
   assert.equal(JSON.stringify(replay).includes('fixture-yape-token'), false);
 });
+
+test('Yape one-time token is never persisted in the ledger', async t => {
+  const { service, store } = setup(t);
+  await service.create(context, yapeCommand());
+  const persisted = JSON.stringify(store.list());
+  assert.equal(persisted.includes('fixture-yape-token'), false);
+  assert.equal(persisted.includes('123456'), false);
+  assert.equal(persisted.includes('111111111'), false);
+});
