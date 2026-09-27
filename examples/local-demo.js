@@ -10,8 +10,8 @@ const directory = mkdtempSync(join(tmpdir(), 'm-pago-demo-'));
 const domain = new DemoDomain(join(directory, 'domain.sqlite'));
 const store = new SQLitePaymentStore(join(directory, 'ledger.sqlite'));
 let payment; let creates = 0;
-const provider = new MercadoPagoAdapter({ accessToken: 'TEST-offline-fixture', collectorId: '123', currency: 'PEN',
-  fetch: async (_url, init) => {
+const provider = new MercadoPagoAdapter({ accessToken: 'APP_USR-offline-fixture', collectorId: '123', currency: 'PEN',
+  environment: 'test', fetch: async (_url, init) => {
     if (init.method === 'POST') {
       creates++;
       const input = JSON.parse(init.body);
